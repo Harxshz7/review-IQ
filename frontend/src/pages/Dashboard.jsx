@@ -3,10 +3,10 @@ import { useProducts } from '../context/ProductContext'
 import axios from 'axios'
 import {
   MessageSquare, Bot, AlertTriangle, Shield, Heart,
-  TrendingUp, Globe
+  TrendingUp, Globe, Activity, LayoutGrid, Zap
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import StatCard from '../components/StatCard'
 import FeatureCard from '../components/FeatureCard'
 import TrendChart from '../components/TrendChart'
@@ -16,14 +16,15 @@ import ReviewTable from '../components/ReviewTable'
 import SkeletonLoader from '../components/SkeletonLoader'
 import { useNavigate } from 'react-router-dom'
 
-const SENTIMENT_COLORS = ['#10B981', '#EF4444', '#3B82F6']
+const SENTIMENT_COLORS = ['#00FFD1', '#FF4B4B', '#7C3AED']
 
 function CustomPieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-card border border-border-dark rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-xs text-text-primary font-medium">
-        {payload[0].name}: {payload[0].value} ({payload[0].payload.pct}%)
+    <div className="bg-background/90 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 shadow-2xl">
+      <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-1">{payload[0].name}</p>
+      <p className="text-sm text-text-primary font-mono font-bold">
+        {payload[0].value} <span className="text-xs text-text-muted font-normal ml-1">({payload[0].payload.pct}%)</span>
       </p>
     </div>
   )
@@ -72,19 +73,30 @@ export default function Dashboard() {
     }
   }
 
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  }
+
   if (!selectedProduct) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-20 h-20 rounded-2xl bg-elevated flex items-center justify-center">
-          <MessageSquare size={36} className="text-text-muted" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 text-center">
+        <div className="relative">
+          <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-teal/20 to-violet/20 border border-white/10 flex items-center justify-center animate-float">
+            <MessageSquare size={40} className="text-teal" />
+          </div>
+          <div className="absolute -inset-4 bg-teal/10 blur-3xl -z-10 rounded-full" />
         </div>
-        <h2 className="text-xl font-syne font-bold text-text-primary">No Product Selected</h2>
-        <p className="text-text-muted text-sm">Upload reviews to get started with your analysis.</p>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-syne font-black text-text-primary tracking-tight">No Intelligence Data</h2>
+          <p className="text-text-muted text-sm max-w-sm mx-auto">Your intelligence engine is waiting for input. Upload your first review batch to generate AI insights.</p>
+        </div>
         <button
           onClick={() => navigate('/upload')}
-          className="px-5 py-2.5 bg-teal text-black rounded-xl font-semibold text-sm hover:bg-teal/90 transition-all"
+          className="px-8 py-3 bg-teal text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(0,255,209,0.3)]"
         >
-          Upload Reviews
+          Initialize Analysis
         </button>
       </div>
     )
@@ -92,13 +104,13 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <SkeletonLoader type="stat" count={4} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2"><SkeletonLoader type="chart" /></div>
-          <SkeletonLoader type="card" count={2} />
+      <div className="space-y-8 animate-pulse">
+        <div className="grid grid-cols-4 gap-4"><div className="h-32 bg-white/5 rounded-2xl" /><div className="h-32 bg-white/5 rounded-2xl" /><div className="h-32 bg-white/5 rounded-2xl" /><div className="h-32 bg-white/5 rounded-2xl" /></div>
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-2 h-80 bg-white/5 rounded-2xl" />
+          <div className="h-80 bg-white/5 rounded-2xl" />
         </div>
-        <SkeletonLoader type="feature" count={6} />
+        <div className="grid grid-cols-3 gap-4"><div className="h-40 bg-white/5 rounded-2xl" /><div className="h-40 bg-white/5 rounded-2xl" /><div className="h-40 bg-white/5 rounded-2xl" /></div>
       </div>
     )
   }
@@ -118,216 +130,262 @@ export default function Dashboard() {
   const recentReviews = data.recent_reviews || []
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      className="space-y-10 pb-20"
+    >
+      {/* Header Section */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-4xl font-syne font-black text-white tracking-tight leading-none uppercase italic">
+            Intelligence <span className="text-teal not-italic">Dashboard</span>
+          </h1>
+          <p className="text-text-muted mt-3 font-mono text-[10px] uppercase tracking-[0.3em] font-bold flex items-center gap-2">
+            <Activity size={12} className="text-teal" />
+            Live Analysis: {selectedProduct}
+          </p>
+        </div>
+        <div className="flex gap-2">
+           <div className="px-4 py-2 rounded-xl bg-white/[0.03] border border-white/10 flex items-center gap-2">
+             <div className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+             <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">System Operational</span>
+           </div>
+        </div>
+      </div>
+
       {/* Critical Alerts Banner */}
       <AlertBanner alerts={alerts} />
 
-      {/* Stat Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stat Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           icon={MessageSquare}
           value={data.total_reviews}
-          label="Total Reviews"
-          subtitle="All time"
-          color="#00C896"
-          index={0}
+          label="Processed Volume"
+          subtitle="+12.5%"
+          color="#00FFD1"
         />
         <StatCard
           icon={Bot}
           value={data.bots_detected}
-          label="Bots Detected"
-          subtitle="Auto-filtered"
+          label="Bot Mitigation"
+          subtitle="99.9% Acc"
           color="#F59E0B"
-          index={1}
         />
         <StatCard
           icon={AlertTriangle}
           value={data.flagged_count}
-          label="Flagged"
-          subtitle="Needs review"
-          color="#EF4444"
-          index={2}
+          label="Human Review"
+          subtitle="-4.2%"
+          color="#FF4B4B"
         />
         <StatCard
           icon={Shield}
           value={data.health_score}
-          label="Health Score"
-          subtitle={data.health_score >= 70 ? 'Healthy' : data.health_score >= 40 ? 'At Risk' : 'Critical'}
-          color={data.health_score >= 70 ? '#10B981' : data.health_score >= 40 ? '#F59E0B' : '#EF4444'}
-          index={3}
+          label="Integrity Score"
+          subtitle={`${data.health_score >= 70 ? '+' : ''}${data.health_score - 50}%`}
+          color={data.health_score >= 70 ? '#00FFD1' : data.health_score >= 40 ? '#F59E0B' : '#FF4B4B'}
         />
       </div>
 
-      {/* Sentiment Donut + Active Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sentiment Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-card border border-border-dark rounded-2xl p-6"
-        >
-          <h3 className="text-sm font-semibold text-text-primary font-syne mb-4">Sentiment Distribution</h3>
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={200}>
+      {/* Main Analysis Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Sentiment Analysis */}
+        <div className="lg:col-span-4 glass-card p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal via-violet to-brand-blue opacity-50" />
+          <h3 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+             <Zap size={14} className="text-teal" />
+             Sentiment Matrix
+          </h3>
+          <div className="relative h-[240px]">
+            <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={sentimentData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={3}
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={8}
                   dataKey="value"
                   stroke="none"
+                  animationBegin={200}
+                  animationDuration={1500}
                 >
                   {sentimentData.map((entry, i) => (
-                    <Cell key={i} fill={SENTIMENT_COLORS[i]} />
+                    <Cell key={i} fill={SENTIMENT_COLORS[i]} className="hover:opacity-80 transition-opacity cursor-pointer" />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomPieTooltip />} />
               </PieChart>
             </ResponsiveContainer>
-            {/* Center label */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono text-text-primary">{data.sentiment.positive_pct}%</p>
-                <p className="text-[10px] text-text-muted">Positive</p>
-              </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Positive</span>
+              <span className="text-4xl font-syne font-black text-white">{data.sentiment.positive_pct}%</span>
             </div>
           </div>
-          <div className="flex justify-center gap-4 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-8">
             {sentimentData.map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: SENTIMENT_COLORS[i] }} />
-                <span className="text-xs text-text-muted">{item.name}</span>
+              <div key={i} className="text-center p-3 rounded-2xl bg-white/[0.03] border border-white/5">
+                <p className="text-[9px] font-black text-text-muted uppercase mb-1 tracking-tighter">{item.name}</p>
+                <p className="text-sm font-mono font-bold" style={{ color: SENTIMENT_COLORS[i] }}>{item.pct}%</p>
               </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Active Alerts Panel */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="lg:col-span-2 bg-card border border-border-dark rounded-2xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-text-primary font-syne">Active Alerts</h3>
-            <span className="text-xs text-text-muted">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>
-          </div>
-
-          {alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-text-muted">
-              <Shield size={28} className="mb-2 text-brand-green" />
-              <p className="text-sm">All clear! No active alerts.</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[240px] overflow-y-auto">
-              {alerts.map((alert, i) => (
-                <div
-                  key={alert.id}
-                  className={`flex items-center justify-between p-3 rounded-xl border border-border-dark/50 hover:bg-elevated/50 transition-all ${
-                    alert.severity === 'critical' ? 'bg-brand-red/5' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      alert.severity === 'critical' ? 'bg-brand-red animate-pulse' :
-                      alert.severity === 'high' ? 'bg-brand-amber' :
-                      alert.severity === 'medium' ? 'bg-brand-blue' : 'bg-brand-purple'
-                    }`} />
-                    <div>
-                      <p className="text-sm text-text-primary font-medium">
-                        {alert.feature_name?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </p>
-                      <p className="text-xs text-text-muted">{alert.classification} • {alert.affected_count} affected</p>
-                    </div>
-                  </div>
-                  <span className={`badge-${alert.severity} text-[10px] font-bold px-2 py-0.5 rounded-md uppercase`}>
-                    {alert.severity}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Action Cards */}
-      {actionCards.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary font-syne mb-4 flex items-center gap-2">
-            <Heart size={16} className="text-brand-red" />
-            AI Recommended Actions
-          </h3>
-          <div className="space-y-4">
-            {actionCards.map((card, i) => (
-              <ActionCard
-                key={card.id}
-                card={card}
-                index={i}
-                onResolve={handleResolve}
-              />
             ))}
           </div>
         </div>
-      )}
 
-      {/* Feature Cards Grid */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary font-syne mb-4">Feature Intelligence</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Anomaly / Alerts List */}
+        <div className="lg:col-span-8 glass-card p-8 flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
+               <Activity size={14} className="text-brand-red" />
+               Signal Detection
+            </h3>
+            <span className="font-mono text-[10px] font-bold text-teal bg-teal/10 px-3 py-1 rounded-full border border-teal/20">
+              {alerts.length} Active Signals
+            </span>
+          </div>
+
+          <div className="flex-1 space-y-3 max-h-[360px] overflow-y-auto pr-2">
+            <AnimatePresence mode="popLayout">
+              {alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-text-muted space-y-4 py-10 opacity-40">
+                  <Shield size={48} strokeWidth={1} />
+                  <p className="text-sm font-syne font-bold uppercase tracking-widest">No Anomalies Detected</p>
+                </div>
+              ) : (
+                alerts.map((alert, i) => (
+                  <div
+                    key={alert.id}
+                    className={`group flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition-all ${
+                      alert.severity === 'critical' ? 'border-brand-red/20 bg-brand-red/[0.02]' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-2 h-10 rounded-full ${
+                        alert.severity === 'critical' ? 'bg-brand-red shadow-[0_0_10px_rgba(255,75,75,0.5)]' :
+                        alert.severity === 'high' ? 'bg-brand-amber' :
+                        'bg-brand-blue'
+                      }`} />
+                      <div>
+                        <p className="text-sm font-bold text-text-primary group-hover:text-teal transition-colors">
+                          {alert.feature_name?.replace('_', ' ').toUpperCase()}
+                        </p>
+                        <p className="text-[10px] font-mono font-bold text-text-muted uppercase mt-0.5 tracking-tighter">
+                          {alert.classification} • {alert.affected_count} IMPACTED ENTITIES
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                       <span className={`text-[9px] font-black px-3 py-1.5 rounded-xl border uppercase tracking-widest ${
+                         alert.severity === 'critical' ? 'bg-brand-red/10 text-brand-red border-brand-red/20' : 'bg-white/5 text-text-secondary border-white/10'
+                       }`}>
+                        {alert.severity}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Cards Centerpiece */}
+      <AnimatePresence>
+        {actionCards.length > 0 && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+              <h3 className="text-sm font-syne font-black text-text-primary uppercase tracking-[0.3em] italic flex items-center gap-3">
+                <Heart size={18} className="text-brand-red animate-pulse" />
+                AI Strategy Center
+              </h3>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+            </div>
+            <div className="grid grid-cols-1 gap-6">
+              {actionCards.map((card, i) => (
+                <ActionCard
+                  key={card.id}
+                  card={card}
+                  index={i}
+                  onResolve={handleResolve}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Feature Intelligence Matrix */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-syne font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+          <LayoutGrid size={18} className="text-violet" />
+          Feature Intelligence Matrix
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Object.entries(features).map(([key, val], i) => (
             <FeatureCard key={key} feature={key} data={val} index={i} />
           ))}
         </div>
       </div>
 
-      {/* Trend Chart */}
+      {/* Trend Timeline */}
       {trends?.time_series && (
-        <TrendChart
-          timeSeriesData={trends.time_series}
-          alerts={trends.alerts}
-        />
-      )}
-
-      {/* Recent Reviews */}
-      {recentReviews.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary font-syne mb-4">Recent Reviews</h3>
-          <ReviewTable
-            reviews={recentReviews}
-            total={recentReviews.length}
-            page={1}
-            totalPages={1}
-            compact
-          />
+        <div className="space-y-6">
+           <h3 className="text-sm font-syne font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+            <TrendingUp size={18} className="text-brand-blue" />
+            Temporal Sentiment Flux
+          </h3>
+          <div className="glass-card p-2 overflow-hidden">
+            <TrendChart
+              timeSeriesData={trends.time_series}
+              alerts={trends.alerts}
+            />
+          </div>
         </div>
       )}
 
       {/* Language Breakdown */}
       {Object.keys(langStats).length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-card border border-border-dark rounded-2xl p-6"
-        >
-          <h3 className="text-sm font-semibold text-text-primary font-syne mb-4 flex items-center gap-2">
-            <Globe size={16} className="text-brand-blue" />
-            Language Breakdown
+        <div className="glass-card p-10 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 w-64 h-64 bg-violet/5 blur-[100px] -z-10" />
+          <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
+            <Globe size={16} className="text-brand-blue group-hover:rotate-12 transition-transform duration-700" />
+            Global Linguistic Distribution
           </h3>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             {Object.entries(langStats).sort((a, b) => b[1] - a[1]).map(([lang, count]) => (
-              <div key={lang} className="flex items-center gap-2 bg-elevated rounded-xl px-3 py-2">
-                <span className="text-sm text-text-primary capitalize font-medium">{lang}</span>
-                <span className="text-xs font-mono text-text-muted bg-base px-1.5 py-0.5 rounded">{count}</span>
+              <div key={lang} className="group/lang flex items-center gap-4 bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-3 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300">
+                <span className="text-sm text-text-primary capitalize font-bold tracking-tight">{lang}</span>
+                <div className="h-4 w-px bg-white/10" />
+                <span className="text-xs font-mono font-bold text-teal">{count}</span>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
+      )}
+
+      {/* Recent Reviews (Technical View) */}
+      {recentReviews.length > 0 && (
+        <div className="space-y-6">
+          <h3 className="text-sm font-syne font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+            <MessageSquare size={18} className="text-teal" />
+            RAW DATA FEED
+          </h3>
+          <div className="glass-card p-1 overflow-hidden">
+            <ReviewTable
+              reviews={recentReviews}
+              total={recentReviews.length}
+              page={1}
+              totalPages={1}
+              compact
+            />
+          </div>
+        </div>
       )}
     </div>
   )

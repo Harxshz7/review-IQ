@@ -1,43 +1,61 @@
-import { motion } from 'framer-motion'
 import useCountUp from '../hooks/useCountUp'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
-export default function StatCard({ icon: Icon, value, label, subtitle, color = '#00C896', index = 0 }) {
+export default function StatCard({ icon: Icon, value, label, subtitle, color = '#00FFD1', index = 0 }) {
   const animatedValue = useCountUp(typeof value === 'number' ? value : 0)
 
-  const colorMap = {
-    '#00C896': 'bg-teal/15 text-teal',
-    '#3B82F6': 'bg-brand-blue/15 text-brand-blue',
-    '#F59E0B': 'bg-brand-amber/15 text-brand-amber',
-    '#EF4444': 'bg-brand-red/15 text-brand-red',
-    '#8B5CF6': 'bg-brand-purple/15 text-brand-purple',
-    '#10B981': 'bg-brand-green/15 text-brand-green',
-  }
-
-  const iconClass = colorMap[color] || 'bg-teal/15 text-teal'
+  // Extract percentage or trend if present in subtitle
+  const isTrend = subtitle?.includes('%')
+  const isPositive = subtitle?.includes('+') || (isTrend && !subtitle?.includes('-'))
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
-      className="bg-card border border-border-dark rounded-2xl p-5 hover:border-[#374151] hover:scale-[1.01] transition-all group"
-    >
-      <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconClass}`}>
-          {Icon && <Icon size={20} />}
+    <div className="glass-card p-6 relative overflow-hidden group">
+      {/* Background Glow Effect - simplified */}
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-teal/5 rounded-full blur-2xl" />
+      
+      <div className="flex items-start justify-between relative z-10">
+        <div 
+          className="w-12 h-12 rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/10"
+          style={{ background: `linear-gradient(135deg, ${color}20 0%, transparent 100%)` }}
+        >
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          {Icon && <Icon size={22} style={{ color: color }} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />}
         </div>
+        
         {subtitle && (
-          <span className="text-xs text-text-muted bg-elevated px-2 py-0.5 rounded-full">
+          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold font-mono tracking-tighter ${
+            isTrend 
+              ? isPositive ? 'bg-teal/10 text-teal border border-teal/20' : 'bg-brand-red/10 text-brand-red border border-brand-red/20'
+              : 'bg-white/5 text-text-muted border border-white/5'
+          }`}>
+            {isTrend && (isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />)}
             {subtitle}
-          </span>
+          </div>
         )}
       </div>
-      <div className="mt-4">
-        <p className="text-3xl font-bold font-mono number-display text-text-primary">
-          {typeof value === 'number' ? animatedValue : value}
+
+      <div className="mt-6 relative z-10">
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-extrabold font-mono text-text-primary tracking-tighter drop-shadow-sm">
+            {typeof value === 'number' ? animatedValue.toLocaleString() : value}
+          </span>
+          {typeof value === 'number' && value > 1000 && <span className="text-xs text-text-muted font-mono mb-1">+</span>}
+        </div>
+        <p className="text-xs font-bold text-text-muted uppercase tracking-[0.15em] mt-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+          {label}
         </p>
-        <p className="text-sm text-text-muted mt-1">{label}</p>
       </div>
-    </motion.div>
+
+      {/* Subtle Pattern Overlay */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay">
+        <svg width="100%" height="100%">
+          <pattern id={`pattern-${index}`} x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M0 0h20v20H0z" fill="none" />
+            <circle cx="2" cy="2" r="1" fill="currentColor" />
+          </pattern>
+          <rect width="100%" height="100%" fill={`url(#pattern-${index})`} />
+        </svg>
+      </div>
+    </div>
   )
 }

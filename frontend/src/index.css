@@ -28,17 +28,15 @@ body {
 @layer components {
   .glass-card {
     background-color: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(10px);
     border-radius: 1rem;
-    transition: all 300ms ease;
+    transition: background-color 200ms ease, border-color 200ms ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .glass-card:hover {
     background-color: rgba(255, 255, 255, 0.08);
-    transform: scale(1.01);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 10px 40px rgba(0, 0, 0, 0.4);
   }
 
   .glow-teal {
