@@ -130,13 +130,7 @@ export default function Dashboard() {
   const recentReviews = data.recent_reviews || []
 
   return (
-    <motion.div 
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageVariants}
-      className="space-y-10 pb-20"
-    >
+    <div className="space-y-10 pb-20">
       {/* Header Section */}
       <div className="flex items-end justify-between">
         <div>
