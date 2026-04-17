@@ -35,6 +35,7 @@ ReviewIQ is an AI-powered platform that ingests customer reviews (CSV/JSON/text)
 
 Use the provided script to start both backend and frontend automatically:
 
+**Linux / macOS:**
 ```bash
 # Make script executable (first time only)
 chmod +x start.sh
@@ -43,13 +44,27 @@ chmod +x start.sh
 ./start.sh
 ```
 
+**Windows (Command Prompt):**
+```cmd
+start.bat
+```
+
+**Windows (PowerShell):**
+```powershell
+# First time only - allow script execution
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Start both services
+.\start.ps1
+```
+
 This will:
 - Auto-check and setup virtual environment if missing
 - Auto-install frontend dependencies if missing
 - Start backend on `http://localhost:8000`
 - Start frontend on `http://localhost:5173`
 - Show colored logs from both services
-- Press `Ctrl+C` to stop both services cleanly
+- Press `Ctrl+C` to stop both services cleanly (Linux/Mac) or close CMD windows (Windows)
 
 ---
 
@@ -59,10 +74,11 @@ If you prefer to run services separately:
 
 #### 1. Backend Setup
 
+**Linux / macOS:**
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
 # Copy and fill environment variables
@@ -76,8 +92,27 @@ python synthetic_data.py
 python main.py
 ```
 
+**Windows:**
+```cmd
+cd backend
+python -m venv venv
+venv\Scripts\activate.bat
+pip install -r requirements.txt
+
+# Copy and fill environment variables
+copy .env.example .env
+# Edit .env with your GEMINI_API_KEY and GROQ_API_KEY
+
+# Generate demo data
+python synthetic_data.py
+
+# Run server
+python main.py
+```
+
 #### 2. Frontend Setup
 
+**Linux / macOS / Windows:**
 ```bash
 cd frontend
 npm install
@@ -104,7 +139,9 @@ npm run dev
 
 ```
 reviewiq/
-├── start.sh                 # One-command start script (recommended)
+├── start.sh                 # Linux/macOS start script (recommended)
+├── start.bat                # Windows CMD start script
+├── start.ps1                # Windows PowerShell start script
 ├── package.json             # Root npm config with concurrent scripts
 ├── backend/
 │   ├── main.py              # FastAPI routes + SSE streaming
