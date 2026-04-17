@@ -1,0 +1,288 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ReviewIQ — Global Styles & Design System
+   Premium dark SaaS aesthetic
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #0D1117;
+  color: #F1F5F9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Syne', sans-serif;
+}
+
+/* ── Custom Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0D1117;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 #0D1117;
+}
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 24px 6px rgba(239, 68, 68, 0.25);
+  }
+}
+
+@keyframes flash-green {
+  0% {
+    background-color: rgba(0, 200, 150, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes countUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-teal {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0, 200, 150, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 200, 150, 0.5);
+  }
+}
+
+/* ── Utility Classes ───────────────────────────────────────────────────── */
+.shimmer-bg {
+  background: linear-gradient(90deg, #111827 25%, #1F2937 50%, #111827 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.animate-flash-green {
+  animation: flash-green 800ms ease-out;
+}
+
+.animate-pulse-red {
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+.glass-card {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+.gradient-border {
+  border-image: linear-gradient(135deg, #00C896, #3B82F6) 1;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #00C896, #3B82F6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Number Display ───────────────────────────────────────────────────── */
+.number-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Input Styles ──────────────────────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F1F5F9;
+  -webkit-box-shadow: 0 0 0px 1000px #1F2937 inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────────────── */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #1F2937;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #F1F5F9;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+/* ── Recharts ─────────────────────────────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #1E293B;
+}
+
+.recharts-text {
+  fill: #94A3B8;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+}
+
+/* ── Drag & Drop Zone ─────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed #374151;
+  transition: all 300ms ease;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: #00C896;
+  background: rgba(0, 200, 150, 0.05);
+}
+
+/* ── Progress Bar ─────────────────────────────────────────────────────── */
+.progress-bar {
+  background: linear-gradient(90deg, #00C896, #3B82F6);
+  transition: width 500ms ease-out;
+  border-radius: 9999px;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.sidebar-link {
+  transition: all 200ms ease;
+  border-left: 2px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: rgba(0, 200, 150, 0.05);
+  border-left-color: rgba(0, 200, 150, 0.3);
+}
+
+.sidebar-link.active {
+  background: rgba(0, 200, 150, 0.05);
+  border-left-color: #00C896;
+  color: #00C896;
+}
+
+/* ── Badge Styles ─────────────────────────────────────────────────────── */
+.badge-positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.badge-negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-neutral {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.badge-critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  animation: pulse-red 2s ease-in-out infinite;
+}
+
+.badge-high {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-medium {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.badge-low {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8B5CF6;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
