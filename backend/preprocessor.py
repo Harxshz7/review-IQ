@@ -27,7 +27,6 @@ def _strip_emojis(text: str) -> str:
         "\U00002702-\U000027B0"  # dingbats
         "\U0000FE00-\U0000FE0F"  # variation selectors
         "\U0000200D"             # zero width joiner
-        "\U00000020-\U00000020"  # space
         "\U000000A9"             # copyright
         "\U000000AE"             # registered
         "]+",
@@ -74,7 +73,7 @@ def _detect_bots(reviews: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Short review detection
     for i, text in enumerate(texts):
         word_count = len(text.split())
-        if word_count < 4:
+        if word_count < 3:
             reviews[i]["is_bot_suspected"] = True
 
     # TF-IDF cosine similarity
@@ -89,7 +88,7 @@ def _detect_bots(reviews: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         for i in range(len(reviews)):
             for j in range(i + 1, len(reviews)):
-                if sim_matrix[i][j] > 0.82:
+                if sim_matrix[i][j] > 0.90:
                     reviews[i]["is_bot_suspected"] = True
                     reviews[j]["is_bot_suspected"] = True
     except Exception:

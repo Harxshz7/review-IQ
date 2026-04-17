@@ -22,7 +22,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-BATCH_SIZE = 8
+BATCH_SIZE = 25
 FEATURES = [
     "battery_life", "build_quality", "packaging",
     "delivery_speed", "price_value", "customer_support"
@@ -80,57 +80,51 @@ def safe_json_parse(text: str) -> Any:
 
 
 def _build_analysis_prompt(reviews: List[str]) -> str:
-    """Build the Gemini prompt for review analysis."""
+    """Build a comprehensive Gemini prompt for multi-language review analysis."""
     count = len(reviews)
-    reviews_numbered = "\n".join(
-        f"{i}. \"{review}\"" for i, review in enumerate(reviews)
-    )
+    reviews_text = "\n".join(f"{i}: {r}" for i, r in enumerate(reviews))
 
-    return f"""You are a product intelligence analyst for an e-commerce platform.
-
-Analyze the following {count} customer reviews and return ONLY a raw JSON array.
-No explanation. No markdown. No code blocks. Start with [ end with ].
-
-Reviews:
-{reviews_numbered}
-
-Return array, one object per review:
-[{{
-  "review_index": 0,
-  "language_detected": "english",
-  "translated_text": "same as input if english, else english translation",
-  "overall_sentiment": "positive",
-  "is_sarcastic": false,
-  "is_bot_suspected": false,
-  "features": {{
-    "battery_life":     {{"sentiment": "positive", "confidence": 0.9}},
-    "build_quality":    {{"sentiment": "not_mentioned", "confidence": 0.0}},
-    "packaging":        {{"sentiment": "not_mentioned", "confidence": 0.0}},
-    "delivery_speed":   {{"sentiment": "not_mentioned", "confidence": 0.0}},
-    "price_value":      {{"sentiment": "not_mentioned", "confidence": 0.0}},
-    "customer_support": {{"sentiment": "not_mentioned", "confidence": 0.0}}
-  }},
-  "flagged_for_human_review": false,
-  "flag_reason": null
-}}]
+    return f"""Analyze {count} product reviews for sentiment and feature-specific feedback.
+You must handle reviews in English and other languages (Hindi, Kannada, etc.) by understanding the context.
 
 Rules:
-- overall_sentiment: positive|negative|neutral|ambiguous
-- feature sentiment: positive|negative|neutral|not_mentioned
-- is_sarcastic=true → flagged_for_human_review=true always
-- ambiguous overall → flagged_for_human_review=true always
-- Only score features mentioned in the review
-- Return ONLY the JSON array. Nothing else."""
+- sentiment: positive | negative | neutral | ambiguous
+- features to track: battery_life, build_quality, packaging, delivery_speed, price_value, customer_support
+- feature sentiment (s): positive | negative | neutral | not_mentioned
+- feature confidence (c): 0.0 to 1.0
+
+Return ONLY a valid JSON array of objects. Do not include any other text.
+
+Reviews:
+{reviews_text}
+
+Required JSON Format:
+[
+  {{
+    "i": 0,
+    "sentiment": "positive",
+    "sarcastic": false,
+    "features": {{
+      "battery_life": {{"s": "positive", "c": 0.9}},
+      "build_quality": {{"s": "not_mentioned", "c": 0.0}},
+      "packaging": {{"s": "not_mentioned", "c": 0.0}},
+      "delivery_speed": {{"s": "not_mentioned", "c": 0.0}},
+      "price_value": {{"s": "not_mentioned", "c": 0.0}},
+      "customer_support": {{"s": "not_mentioned", "c": 0.0}}
+    }}
+  }}
+]"""
 
 
 def _analyze_with_gemini(prompt: str) -> List[Dict]:
-    """Call Gemini 1.5 Flash for review analysis."""
+    """Call Gemini 1.5 Flash for review analysis with JSON mode."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(
         prompt,
         generation_config=genai.types.GenerationConfig(
             temperature=0.1,
-            max_output_tokens=4096,
+            max_output_tokens=8192,
+            response_mime_type="application/json",
         ),
     )
     return safe_json_parse(response.text)
@@ -151,31 +145,81 @@ def _analyze_with_groq(prompt: str) -> List[Dict]:
     return safe_json_parse(response.choices[0].message.content)
 
 
+import concurrent.futures
+
+def _heuristic_analysis(text: str, index: int) -> Dict:
+    """A simple keyword-based fallback when AI analysis fails."""
+    text_lower = text.lower()
+    
+    # Simple sentiment heuristic
+    pos_words = ["good", "great", "amazing", "excellent", "best", "love", "achhi", "badhiya", "superb"]
+    neg_words = ["bad", "poor", "worst", "hate", "bekar", "kharab", "stuck", "broken", "fail"]
+    
+    pos_score = sum(1 for w in pos_words if w in text_lower)
+    neg_score = sum(1 for w in neg_words if w in text_lower)
+    
+    sentiment = "neutral"
+    if pos_score > neg_score: sentiment = "positive"
+    elif neg_score > pos_score: sentiment = "negative"
+    
+    # Feature keywords
+    feature_keywords = {
+        "battery_life": ["battery", "charge", "backup", "charging", "mah"],
+        "build_quality": ["build", "quality", "feel", "sturdy", "premium", "plastic", "stuck", "keys", "button"],
+        "packaging": ["package", "packaging", "box", "unboxing", "wrap"],
+        "delivery_speed": ["delivery", "delivered", "shipping", "fast", "slow", "days", "courier"],
+        "price_value": ["price", "money", "value", "cost", "cheap", "expensive", "paisa", "rupee", "worth"],
+        "customer_support": ["support", "service", "customer", "team", "help", "response", "warranty"],
+    }
+    
+    features = {}
+    for feat, keywords in feature_keywords.items():
+        if any(kw in text_lower for kw in keywords):
+            features[feat] = {"s": sentiment, "c": 0.5}
+        else:
+            features[feat] = {"s": "not_mentioned", "c": 0.0}
+            
+    return {
+        "i": index,
+        "sentiment": sentiment,
+        "sarcastic": False,
+        "features": features
+    }
+
+
 def analyze_batch(reviews: List[str]) -> List[Dict]:
     """
-    Analyze a batch of reviews using Gemini with Groq fallback.
-
-    Args:
-        reviews: List of review text strings (max BATCH_SIZE)
-
-    Returns:
-        List of analysis result dicts, one per review
+    Analyze a batch of reviews using Gemini with Groq fallback and timeout.
+    Uses a heuristic fallback if both AI services fail.
     """
     if not reviews:
         return []
 
     prompt = _build_analysis_prompt(reviews)
+    results = None
 
-    # Try Gemini first, fallback to Groq on any exception
-    try:
-        results = _analyze_with_gemini(prompt)
-    except Exception as e:
-        print(f"⚠️  Gemini failed ({e}), falling back to Groq...")
-        try:
-            results = _analyze_with_groq(prompt)
-        except Exception as e2:
-            print(f"❌ Groq also failed ({e2}). Returning defaults.")
-            return [_default_analysis(i) for i in range(len(reviews))]
+    # Use a ThreadPoolExecutor to enforce a timeout on the AI calls
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Step 1: Try Gemini with a 15-second timeout
+        if GEMINI_API_KEY:
+            future = executor.submit(_analyze_with_gemini, prompt)
+            try:
+                results = future.result(timeout=15)
+            except Exception as e:
+                print(f"⚠️  Gemini failed or timed out ({e}), falling back to Groq...")
+        
+        # Step 2: Try Groq with a 10-second timeout if Gemini failed
+        if (not results) and GROQ_API_KEY:
+            future = executor.submit(_analyze_with_groq, prompt)
+            try:
+                results = future.result(timeout=10)
+            except Exception as e2:
+                print(f"❌ Groq also failed or timed out ({e2}).")
+
+    # Step 3: Heuristic Fallback if both failed
+    if not results:
+        print("💡 Using heuristic fallback for analysis.")
+        return [_heuristic_analysis(r, i) for i, r in enumerate(reviews)]
 
     # Validate and pad results if needed
     if not isinstance(results, list):
@@ -183,7 +227,8 @@ def analyze_batch(reviews: List[str]) -> List[Dict]:
 
     # Ensure we have one result per review
     while len(results) < len(reviews):
-        results.append(_default_analysis(len(results)))
+        idx = len(results)
+        results.append(_heuristic_analysis(reviews[idx], idx))
 
     return results[:len(reviews)]
 
@@ -191,59 +236,58 @@ def analyze_batch(reviews: List[str]) -> List[Dict]:
 def _default_analysis(index: int) -> Dict:
     """Return a default analysis when AI fails."""
     return {
-        "review_index": index,
-        "language_detected": "english",
-        "translated_text": "",
-        "overall_sentiment": "neutral",
-        "is_sarcastic": False,
-        "is_bot_suspected": False,
+        "i": index,
+        "sentiment": "neutral",
+        "sarcastic": False,
         "features": {
-            "battery_life": {"sentiment": "not_mentioned", "confidence": 0.0},
-            "build_quality": {"sentiment": "not_mentioned", "confidence": 0.0},
-            "packaging": {"sentiment": "not_mentioned", "confidence": 0.0},
-            "delivery_speed": {"sentiment": "not_mentioned", "confidence": 0.0},
-            "price_value": {"sentiment": "not_mentioned", "confidence": 0.0},
-            "customer_support": {"sentiment": "not_mentioned", "confidence": 0.0},
+            "battery_life": {"s": "not_mentioned", "c": 0.0},
+            "build_quality": {"s": "not_mentioned", "c": 0.0},
+            "packaging": {"s": "not_mentioned", "c": 0.0},
+            "delivery_speed": {"s": "not_mentioned", "c": 0.0},
+            "price_value": {"s": "not_mentioned", "c": 0.0},
+            "customer_support": {"s": "not_mentioned", "c": 0.0},
         },
-        "flagged_for_human_review": False,
-        "flag_reason": None,
     }
 
 
 def map_analysis_to_review(analysis: Dict) -> Dict:
     """
     Map AI analysis results to Review model field names.
-
-    Returns a dict compatible with Review model columns.
+    Handles both object and string formats for feature data.
     """
+    if not isinstance(analysis, dict):
+        return map_analysis_to_review(_default_analysis(0))
+
     result = {
-        "overall_sentiment": analysis.get("overall_sentiment", "neutral"),
-        "is_sarcastic": analysis.get("is_sarcastic", False),
-        "flagged_for_human_review": analysis.get("flagged_for_human_review", False),
-        "flag_reason": analysis.get("flag_reason"),
+        "overall_sentiment": analysis.get("sentiment", "neutral"),
+        "is_sarcastic": analysis.get("sarcastic", False),
+        "flagged_for_human_review": False,
+        "flag_reason": None,
     }
 
     # Map feature sentiments
     features = analysis.get("features", {})
     for feature_key, (sent_col, conf_col) in FEATURE_MAP.items():
         feat_data = features.get(feature_key, {})
+        
         if isinstance(feat_data, dict):
-            result[sent_col] = feat_data.get("sentiment", "not_mentioned")
-            result[conf_col] = float(feat_data.get("confidence", 0.0))
+            # Try new short keys first (s/c), then old ones
+            result[sent_col] = feat_data.get("s", feat_data.get("sentiment", "not_mentioned"))
+            try:
+                result[conf_col] = float(feat_data.get("c", feat_data.get("confidence", 0.0)))
+            except (ValueError, TypeError):
+                result[conf_col] = 0.0
+        elif isinstance(feat_data, str):
+            # Robustness: LLM returned just a string sentiment
+            result[sent_col] = feat_data if feat_data in ["positive", "negative", "neutral", "not_mentioned"] else "not_mentioned"
+            result[conf_col] = 0.7 if result[sent_col] != "not_mentioned" else 0.0
         else:
             result[sent_col] = "not_mentioned"
             result[conf_col] = 0.0
 
-    # Ensure sarcastic always gets flagged
-    if result["is_sarcastic"]:
+    # Business Logic for flagging
+    if result["is_sarcastic"] or result["overall_sentiment"] == "ambiguous":
         result["flagged_for_human_review"] = True
-        if not result["flag_reason"]:
-            result["flag_reason"] = "Sarcasm detected"
-
-    # Ensure ambiguous always gets flagged
-    if result["overall_sentiment"] == "ambiguous":
-        result["flagged_for_human_review"] = True
-        if not result["flag_reason"]:
-            result["flag_reason"] = "Ambiguous sentiment"
+        result["flag_reason"] = "Sarcasm/Ambiguity"
 
     return result

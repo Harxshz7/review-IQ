@@ -226,79 +226,88 @@ async def run_analysis_pipeline(
     batch.flagged_count = preprocess_result["flagged_count"]
     db.commit()
 
-    # Step 3: AI Analysis in batches
+    # Step 3: Parallel AI Analysis in batches
     processed = 0
-    for i in range(0, len(clean_reviews), BATCH_SIZE):
-        batch_reviews = clean_reviews[i:i + BATCH_SIZE]
-        texts = [r.get("clean_text", r.get("review_text", "")) for r in batch_reviews]
-
-        # Call AI in a thread to avoid blocking
+    # Process up to 4 batches concurrently to maximize speed without hitting rate limits
+    concurrent_batches = 4
+    
+    for i in range(0, len(clean_reviews), BATCH_SIZE * concurrent_batches):
+        batch_tasks = []
+        batch_data_list = []
+        
+        # Prepare concurrent batch tasks
+        for k in range(concurrent_batches):
+            start_idx = i + (k * BATCH_SIZE)
+            if start_idx >= len(clean_reviews):
+                break
+                
+            batch_reviews = clean_reviews[start_idx : start_idx + BATCH_SIZE]
+            texts = [r.get("clean_text", r.get("review_text", "")) for r in batch_reviews]
+            
+            batch_data_list.append(batch_reviews)
+            batch_tasks.append(asyncio.to_thread(analyze_batch, texts))
+            
+        if not batch_tasks:
+            break
+            
+        # Execute multiple AI calls in parallel
         try:
-            ai_results = await asyncio.to_thread(analyze_batch, texts)
+            all_batch_results = await asyncio.gather(*batch_tasks)
         except Exception as e:
-            print(f"AI batch error: {e}")
-            ai_results = [{"overall_sentiment": "neutral", "features": {}} for _ in texts]
+            print(f"Parallel AI error: {e}")
+            all_batch_results = [[{"overall_sentiment": "neutral", "features": {}} for _ in b] for b in batch_data_list]
 
-        latest_reviews = []
-
-        for j, (review_data, ai_result) in enumerate(zip(batch_reviews, ai_results)):
-            mapped = map_analysis_to_review(ai_result)
-
-            # Merge bot detection from preprocessor
-            if review_data.get("is_bot_suspected", False):
-                mapped["is_bot_suspected"] = True
-
-            # Determine product name and category
-            product_name = review_data.get("product_name", "Unknown Product")
-            category = review_data.get("category", "General")
-
-            # Parse submitted_at
-            submitted_at = review_data.get("submitted_at")
-            if isinstance(submitted_at, str):
-                try:
-                    submitted_at = datetime.strptime(submitted_at, "%Y-%m-%d %H:%M:%S")
-                except Exception:
+        # Save results to DB
+        for batch_idx, (batch_reviews, ai_results) in enumerate(zip(batch_data_list, all_batch_results)):
+            latest_reviews = []
+            for review_data, ai_result in zip(batch_reviews, ai_results):
+                mapped = map_analysis_to_review(ai_result)
+                
+                # Merge bot/preprocess data
+                if review_data.get("is_bot_suspected", False):
+                    mapped["is_bot_suspected"] = True
+                
+                # ... same saving logic ...
+                product_name = review_data.get("product_name", "Unknown Product")
+                category = review_data.get("category", "General")
+                submitted_at = review_data.get("submitted_at")
+                if not isinstance(submitted_at, datetime):
                     submitted_at = datetime.utcnow()
-            elif not isinstance(submitted_at, datetime):
-                submitted_at = datetime.utcnow()
 
-            review = Review(
-                batch_id=batch.id,
-                user_id=user_id,
-                product_name=product_name,
-                category=category,
-                review_text=review_data.get("review_text", ""),
-                translated_text=review_data.get("translated_text", ""),
-                original_language=review_data.get("original_language", "english"),
-                submitted_at=submitted_at,
-                source=source,
-                **mapped,
-            )
-            db.add(review)
+                review = Review(
+                    batch_id=batch.id,
+                    user_id=user_id,
+                    product_name=product_name,
+                    category=category,
+                    review_text=review_data.get("review_text", ""),
+                    translated_text=review_data.get("translated_text", ""),
+                    original_language=review_data.get("original_language", "english"),
+                    submitted_at=submitted_at,
+                    source=source,
+                    **mapped,
+                )
+                db.add(review)
+                latest_reviews.append({
+                    "review_text": review_data.get("review_text", "")[:100],
+                    "sentiment": mapped.get("overall_sentiment", "neutral"),
+                    "language": review_data.get("original_language", "english"),
+                    "is_bot": mapped.get("is_bot_suspected", False),
+                })
+            
+            db.commit()
+            processed += len(batch_reviews)
+            batch.processed_reviews = processed
+            db.commit()
 
-            latest_reviews.append({
-                "review_text": review_data.get("review_text", "")[:100],
-                "sentiment": mapped.get("overall_sentiment", "neutral"),
-                "language": review_data.get("original_language", "english"),
-                "is_bot": mapped.get("is_bot_suspected", False),
+            # SSE Progress Update
+            yield json.dumps({
+                "type": "batch_done",
+                "processed": processed,
+                "total": len(clean_reviews),
+                "percent": round(processed / len(clean_reviews) * 100, 1),
+                "latest_reviews": latest_reviews,
             })
-
-        db.commit()
-        processed += len(batch_reviews)
-
-        # Update batch progress
-        batch.processed_reviews = processed
-        db.commit()
-
-        # Event 3: Batch done
-        yield json.dumps({
-            "type": "batch_done",
-            "processed": processed,
-            "total": len(clean_reviews),
-            "percent": round(processed / len(clean_reviews) * 100, 1),
-            "latest_reviews": latest_reviews,
-        })
-        await asyncio.sleep(0)
+            await asyncio.sleep(0)
 
     # Step 4: Ensure products exist
     for product_name in products:

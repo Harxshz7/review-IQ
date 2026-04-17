@@ -4,6 +4,7 @@ JWT-based auth with bcrypt password hashing.
 """
 
 import os
+import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -13,7 +14,6 @@ load_dotenv()
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -23,13 +23,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "reviewiq-secret-key-change-this")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
-import bcrypt
-from fastapi.security import OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a bcrypt hash."""
-    # bcrypt limits to 72 bytes natively. We encode and pass exactly that.
     password_bytes = plain_password.encode('utf-8')[:72]
     return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
 
@@ -37,9 +35,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt."""
     password_bytes = password.encode('utf-8')[:72]
-    # bcrypt generates a byte string, we store it as a normal string
     return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode('utf-8')
-
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
