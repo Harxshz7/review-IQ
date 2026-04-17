@@ -11,20 +11,33 @@
 }
 
 body {
-  @apply bg-background text-text-primary font-sans selection:bg-teal selection:text-black;
+  background-color: #0A0E1A;
+  font-family: 'DM Sans', sans-serif;
+  color: #FFFFFF;
   background-image: 
     radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.05) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(0, 255, 209, 0.05) 0px, transparent 50%);
   min-height: 100vh;
 }
 
+::selection {
+  background-color: #00FFD1;
+  color: #000000;
+}
+
 @layer components {
   .glass-card {
-    @apply bg-card backdrop-blur-[20px] border border-border-light rounded-2xl transition-all duration-300;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border-radius: 1rem;
+    transition: all 300ms ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   .glass-card:hover {
-    @apply bg-elevated border-white/20 scale-[1.01];
+    background-color: rgba(255, 255, 255, 0.08);
+    transform: scale(1.01);
+    border-color: rgba(255, 255, 255, 0.2);
     box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02), 0 10px 40px rgba(0, 0, 0, 0.4);
   }
 
@@ -37,23 +50,53 @@ body {
   }
 
   .progress-bar {
-    @apply h-2 rounded-full bg-border-dark overflow-hidden;
+    height: 0.5rem;
+    border-radius: 9999px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.05);
   }
 
   .progress-fill {
-    @apply h-full bg-gradient-to-r from-teal to-brand-blue rounded-full transition-all duration-700 ease-out;
+    height: 100%;
+    background: linear-gradient(to right, #00FFD1, #3B82F6);
+    border-radius: 9999px;
+    transition: all 700ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .badge-positive {
-    @apply bg-teal/10 text-teal border border-teal/20 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+    background-color: rgba(0, 255, 209, 0.1);
+    color: #00FFD1;
+    border: 1px solid rgba(0, 255, 209, 0.2);
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .badge-negative {
-    @apply bg-brand-red/10 text-brand-red border border-brand-red/20 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+    background-color: rgba(255, 75, 75, 0.1);
+    color: #FF4B4B;
+    border: 1px solid rgba(255, 75, 75, 0.2);
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .badge-neutral {
-    @apply bg-violet/10 text-violet border border-violet/20 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+    background-color: rgba(124, 58, 237, 0.1);
+    color: #7C3AED;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .animate-flash-green {
@@ -66,7 +109,9 @@ body {
   }
 
   .sidebar-active {
-    @apply bg-teal/10 border-r-2 border-teal text-teal;
+    background-color: rgba(0, 255, 209, 0.1);
+    border-right: 2px solid #00FFD1;
+    color: #00FFD1;
     box-shadow: inset -5px 0 15px rgba(0, 255, 209, 0.05);
   }
 
@@ -106,9 +151,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-border-light rounded-full;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-border-dark;
+  background-color: rgba(255, 255, 255, 0.05);
 }
