@@ -1,0 +1,14 @@
+{
+  "name": "reviewiq",
+  "version": "1.0.0",
+  "description": "AI-Powered Customer Review Intelligence",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && source venv/bin/activate && python main.py",
+    "frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
